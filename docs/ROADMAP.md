@@ -1,0 +1,12 @@
+# Roadmap
+
+- [x] Phase 1 foundation: Android project, Compose navigation, Arabic/English RTL switch, Room-backed world metadata create/delete, basic tests and CI definition.
+- [ ] Phase 1 completion: world editing, thumbnails, seed validation, backup/restore and user-mediated import/export; device/storage compatibility tests.
+- [ ] Phase 2: evaluate and implement an ARM64 Java runtime and server installation/process lifecycle only after a compatibility and license review; server logs, real status and readiness checks.
+- [ ] Phase 3: foreground service, persistent notification actions, graceful shutdown/recovery and battery guidance; validate on multiple Android versions and vendors.
+- [ ] Phase 4: Paper + Geyser + Floodgate optional stack, version matrix, secure key handling and resource limits.
+- [ ] Phase 5: test official Minecraft launch, LAN discovery and any documented direct-join pathway. If direct join is unsupported, provide a tested manual saved-server fallback.
+- [ ] Phase 6: assess Fabric/NeoForge server compatibility; do not claim Java client mods run on Bedrock.
+- [ ] Phase 7: performance, accessibility, end-to-end tests, release signing instructions and publishing readiness.
+
+A roadmap item is not a delivered feature. Release notes must distinguish tested behavior from planned work.
