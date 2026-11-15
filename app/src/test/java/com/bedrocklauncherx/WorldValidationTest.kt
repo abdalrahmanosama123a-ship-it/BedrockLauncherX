@@ -1,17 +1,16 @@
 package com.bedrocklauncherx
 
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import com.bedrocklauncherx.data.WorldValidation
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class WorldValidationTest {
-    private fun isValidWorldName(value: String) = value.trim().isNotEmpty()
-
     @Test fun rejectsBlankNames() {
-        assertFalse(isValidWorldName("   "))
+        assertNull(WorldValidation.normalizedName("   "))
     }
 
-    @Test fun acceptsTrimmedWorldName() {
-        assertTrue(isValidWorldName("  Survival  "))
+    @Test fun trimsWhitespaceFromName() {
+        assertEquals("Survival", WorldValidation.normalizedName("  Survival  "))
     }
 }

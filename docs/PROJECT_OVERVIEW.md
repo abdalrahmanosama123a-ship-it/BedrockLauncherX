@@ -4,7 +4,7 @@ BedrockLauncherX is an Android companion app intended to organize user-created w
 
 ## Phase 1 delivered in this repository
 
-The native application currently stores world metadata (name, optional seed, game mode, difficulty) in a Room database and exposes a bilingual Arabic/English interface with RTL layout. Users can create and delete these metadata records. They are not Minecraft world saves. Server controls, crossplay and one-tap play are intentionally not represented as working features.
+The native application currently stores world metadata (name, optional seed, game mode, difficulty) in a Room database and exposes a bilingual Arabic/English interface with RTL layout. Users can create, edit and delete these metadata records. They are not Minecraft world saves. Server controls, crossplay and one-tap play are intentionally not represented as working features.
 
 ## Feasibility notes
 

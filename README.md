@@ -8,7 +8,7 @@ A native Android companion launcher for Minecraft Bedrock Edition. The official 
 
 - Native Kotlin and Jetpack Compose Android app, minimum Android 8.0 (API 26), targeting SDK 35.
 - Arabic/English interface switch with right-to-left layout for Arabic.
-- Room-backed world list with create/delete and stored seed, game mode, and difficulty.
+- Room-backed world metadata with create/edit/delete, seed, game mode, and difficulty.
 - Dark theme and initial launcher navigation.
 - GitHub Actions workflow for tests, lint, debug APK and 14-day artifact retention.
 

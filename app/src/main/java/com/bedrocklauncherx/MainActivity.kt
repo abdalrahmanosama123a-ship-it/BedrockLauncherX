@@ -26,6 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.bedrocklauncherx.data.LauncherDatabase
 import com.bedrocklauncherx.data.World
+import com.bedrocklauncherx.data.WorldValidation
 import kotlinx.coroutines.launch
 
 private val Night = Color(0xFF101018)
@@ -47,6 +48,7 @@ private fun LauncherApp(dao: com.bedrocklauncherx.data.WorldDao) {
     var arabic by remember { mutableStateOf(false) }
     var page by remember { mutableStateOf("home") }
     var showCreate by remember { mutableStateOf(false) }
+    var editingWorld by remember { mutableStateOf<World?>(null) }
     val worlds by dao.observeAll().collectAsStateWithLifecycle(initialValue = emptyList())
     val scope = rememberCoroutineScope()
     val title = if (arabic) "BedrockLauncherX" else "BedrockLauncherX"
@@ -79,13 +81,14 @@ private fun LauncherApp(dao: com.bedrocklauncherx.data.WorldDao) {
             ) { padding ->
                 when (page) {
                     "home" -> HomeScreen(arabic, worlds.firstOrNull(), worlds.size, onWorlds = { page = "worlds" }, modifier = Modifier.padding(padding))
-                    "worlds" -> WorldsScreen(arabic, worlds, onAdd = { showCreate = true }, onDelete = { id -> scope.launch { dao.deleteById(id) } }, modifier = Modifier.padding(padding))
+                    "worlds" -> WorldsScreen(arabic, worlds, onAdd = { editingWorld = null; showCreate = true }, onEdit = { editingWorld = it }, onDelete = { id -> scope.launch { dao.deleteById(id) } }, modifier = Modifier.padding(padding))
                     else -> InfoScreen(arabic, page, Modifier.padding(padding))
                 }
             }
-            if (showCreate) CreateWorldDialog(arabic, onDismiss = { showCreate = false }, onCreate = { name, seed, mode, diff ->
-                scope.launch { dao.insert(World(name = name, seed = seed, gameMode = mode, difficulty = diff)) }
+            if (showCreate || editingWorld != null) CreateWorldDialog(arabic, initialWorld = editingWorld, onDismiss = { showCreate = false; editingWorld = null }, onSave = { world ->
+                scope.launch { if (world.id == 0L) dao.insert(world) else dao.update(world) }
                 showCreate = false
+                editingWorld = null
             })
         }
     }
@@ -121,7 +124,7 @@ private fun MetricCard(label: String, value: String, modifier: Modifier = Modifi
 }
 
 @Composable
-private fun WorldsScreen(ar: Boolean, worlds: List<World>, onAdd: () -> Unit, onDelete: (Long) -> Unit, modifier: Modifier = Modifier) {
+private fun WorldsScreen(ar: Boolean, worlds: List<World>, onAdd: () -> Unit, onEdit: (World) -> Unit, onDelete: (Long) -> Unit, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(if (ar) "عوالمك" else "Your Worlds", fontSize = 23.sp, fontWeight = FontWeight.Bold)
@@ -138,6 +141,7 @@ private fun WorldsScreen(ar: Boolean, worlds: List<World>, onAdd: () -> Unit, on
                             Text(world.name, fontWeight = FontWeight.Bold, fontSize = 17.sp)
                             Text("${world.gameMode} · ${world.difficulty}${if (world.seed.isNotBlank()) " · seed ${world.seed}" else ""}", color = Color.LightGray, fontSize = 12.sp)
                         }
+                        IconButton(onClick = { onEdit(world) }) { Icon(Icons.Default.Edit, contentDescription = if (ar) "تعديل" else "Edit", tint = NeonPurple) }
                         IconButton(onClick = { onDelete(world.id) }) { Icon(Icons.Default.DeleteOutline, contentDescription = if (ar) "حذف" else "Delete", tint = Color(0xFFFF8A80)) }
                     }
                 }
@@ -147,12 +151,13 @@ private fun WorldsScreen(ar: Boolean, worlds: List<World>, onAdd: () -> Unit, on
 }
 
 @Composable
-private fun CreateWorldDialog(ar: Boolean, onDismiss: () -> Unit, onCreate: (String, String, String, String) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var seed by remember { mutableStateOf("") }
-    var mode by remember { mutableStateOf("survival") }
-    var difficulty by remember { mutableStateOf("normal") }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text(if (ar) "إنشاء عالم" else "Create World") },
+private fun CreateWorldDialog(ar: Boolean, initialWorld: World?, onDismiss: () -> Unit, onSave: (World) -> Unit) {
+    var name by remember(initialWorld?.id) { mutableStateOf(initialWorld?.name.orEmpty()) }
+    var seed by remember(initialWorld?.id) { mutableStateOf(initialWorld?.seed.orEmpty()) }
+    var mode by remember(initialWorld?.id) { mutableStateOf(initialWorld?.gameMode ?: "survival") }
+    var difficulty by remember(initialWorld?.id) { mutableStateOf(initialWorld?.difficulty ?: "normal") }
+    val isEditing = initialWorld != null
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(if (isEditing) if (ar) "تعديل العالم" else "Edit World" else if (ar) "إنشاء عالم" else "Create World") },
         text = { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedTextField(name, { name = it }, label = { Text(if (ar) "اسم العالم" else "World name") }, singleLine = true)
             OutlinedTextField(seed, { seed = it }, label = { Text(if (ar) "البذرة (اختياري)" else "Seed (optional)") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text))
@@ -161,7 +166,7 @@ private fun CreateWorldDialog(ar: Boolean, onDismiss: () -> Unit, onCreate: (Str
             Text(if (ar) "الصعوبة" else "Difficulty")
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { listOf("peaceful", "easy", "normal", "hard").forEach { value -> FilterChip(selected = difficulty == value, onClick = { difficulty = value }, label = { Text(if (ar) mapOf("peaceful" to "سلمي", "easy" to "سهل", "normal" to "عادي", "hard" to "صعب").getValue(value) else value) }) } }
         } },
-        confirmButton = { TextButton(enabled = name.isNotBlank(), onClick = { onCreate(name.trim(), seed.trim(), mode, difficulty) }) { Text(if (ar) "حفظ" else "Save") } },
+        confirmButton = { TextButton(enabled = WorldValidation.normalizedName(name) != null, onClick = { onSave(World(id = initialWorld?.id ?: 0L, name = checkNotNull(WorldValidation.normalizedName(name)), seed = seed.trim(), gameMode = mode, difficulty = difficulty, createdAt = initialWorld?.createdAt ?: System.currentTimeMillis())) }) { Text(if (ar) "حفظ" else "Save") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(if (ar) "إلغاء" else "Cancel") } })
 }
 

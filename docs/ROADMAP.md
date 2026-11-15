@@ -1,7 +1,7 @@
 # Roadmap
 
-- [x] Phase 1 foundation: Android project, Compose navigation, Arabic/English RTL switch, Room-backed world metadata create/delete, basic tests and CI definition.
-- [ ] Phase 1 completion: world editing, thumbnails, seed validation, backup/restore and user-mediated import/export; device/storage compatibility tests.
+- [x] Phase 1 foundation: Android project, Compose navigation, Arabic/English RTL switch, Room-backed world metadata create/edit/delete, seed, game mode, difficulty, basic tests and CI definition.
+- [ ] Phase 1 completion: thumbnails, richer seed validation, backup/restore and user-mediated world-file import/export; device/storage compatibility tests.
 - [ ] Phase 2: evaluate and implement an ARM64 Java runtime and server installation/process lifecycle only after a compatibility and license review; server logs, real status and readiness checks.
 - [ ] Phase 3: foreground service, persistent notification actions, graceful shutdown/recovery and battery guidance; validate on multiple Android versions and vendors.
 - [ ] Phase 4: Paper + Geyser + Floodgate optional stack, version matrix, secure key handling and resource limits.
