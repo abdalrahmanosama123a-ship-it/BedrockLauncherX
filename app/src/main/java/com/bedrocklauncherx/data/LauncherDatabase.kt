@@ -14,7 +14,9 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface WorldDao {
     @Query("SELECT * FROM worlds ORDER BY createdAt DESC") fun observeAll(): Flow<List<World>>
+    @Query("SELECT * FROM worlds ORDER BY createdAt DESC") suspend fun getAll(): List<World>
     @Insert(onConflict = OnConflictStrategy.ABORT) suspend fun insert(world: World): Long
+    @Insert(onConflict = OnConflictStrategy.ABORT) suspend fun insertAll(worlds: List<World>)
     @Update suspend fun update(world: World)
     @Query("DELETE FROM worlds WHERE id = :id") suspend fun deleteById(id: Long)
 }

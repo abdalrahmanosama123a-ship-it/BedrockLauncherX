@@ -9,12 +9,13 @@ A native Android companion launcher for Minecraft Bedrock Edition. The official 
 - Native Kotlin and Jetpack Compose Android app, minimum Android 8.0 (API 26), targeting SDK 35.
 - Arabic/English interface switch with right-to-left layout for Arabic.
 - Room-backed world metadata with create/edit/delete, seed, game mode, and difficulty.
+- Export and restore launcher world profiles as JSON through Android’s system document picker. Imports append profiles and never replace existing database rows.
 - Modrinth public catalog search for Java Edition mods, filterable by Minecraft game version, with links to official project pages.
 - Mod loader filters for Fabric, Forge, NeoForge, and Quilt.
 - Dark theme and initial launcher navigation.
 - GitHub Actions workflow for tests, lint, debug APK and 14-day artifact retention.
 
-World entries are launcher metadata only; they are not imported into or created by Minecraft. The Modrinth browser searches metadata and opens project pages; it does not download/install mod files, sign into Minecraft, or launch the game. Mods shown are for Java Edition and do not work in Bedrock Edition. Licensed Microsoft account authentication and the Java runtime/launcher are planned work. This project will not bypass Minecraft licensing or provide cracked-account support. Android limits cross-app access to private application data. Minecraft also supports Application and External world storage modes, so direct management of the game's private worlds cannot be assumed.
+World entries are launcher metadata only; they are not imported into or created by Minecraft. Backup files contain profile metadata only and do not include Minecraft world files. Import validates the complete backup before inserting rows; imported profiles are appended and existing profiles are not overwritten. The Modrinth browser searches metadata and opens project pages; it does not download/install mod files, sign into Minecraft, or launch the game. Mods shown are for Java Edition and do not work in Bedrock Edition. Licensed Microsoft account authentication and the Java runtime/launcher are planned work. This project will not bypass Minecraft licensing or provide cracked-account support. Android limits cross-app access to private application data. Minecraft also supports Application and External world storage modes, so direct management of the game's private worlds cannot be assumed.
 
 ## Build
 

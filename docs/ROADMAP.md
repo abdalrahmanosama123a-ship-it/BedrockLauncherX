@@ -4,7 +4,8 @@
 - [x] Mod discovery: public Modrinth search, all listed Minecraft versions, loader filters for Fabric/Forge/NeoForge/Quilt, and project-page links.
 - [ ] Licensed Java Edition launcher: official Microsoft/Xbox/Minecraft account flow, Mojang version manifest, Java runtime provisioning, libraries/assets, and tested game launch. Requires a registered OAuth client and device-level compatibility validation.
 - [ ] Mod installation: resolve Modrinth project versions/dependencies, verify downloaded hashes, install into an isolated per-version profile, and handle loader/runtime compatibility.
-- [ ] Phase 1 completion: thumbnails, richer seed validation, backup/restore and user-mediated world-file import/export; device/storage compatibility tests.
+- [x] Launcher-profile JSON backup and restore through Android Storage Access Framework; validated format version and append-only import.
+- [ ] Phase 1 completion: thumbnails, richer seed validation, and user-mediated Minecraft world-file import/export where supported; device/storage compatibility tests.
 - [ ] Phase 2: evaluate and implement an ARM64 Java runtime and server installation/process lifecycle only after a compatibility and license review; server logs, real status and readiness checks.
 - [ ] Phase 3: foreground service, persistent notification actions, graceful shutdown/recovery and battery guidance; validate on multiple Android versions and vendors.
 - [ ] Phase 4: Paper + Geyser + Floodgate optional stack, version matrix, secure key handling and resource limits.

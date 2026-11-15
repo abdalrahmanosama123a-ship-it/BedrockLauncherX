@@ -3,8 +3,11 @@ package com.bedrocklauncherx
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,6 +34,7 @@ import com.bedrocklauncherx.data.LauncherDatabase
 import com.bedrocklauncherx.data.ModrinthProject
 import com.bedrocklauncherx.data.ModrinthRepository
 import com.bedrocklauncherx.data.World
+import com.bedrocklauncherx.data.WorldBackup
 import com.bedrocklauncherx.data.WorldValidation
 import kotlinx.coroutines.launch
 
@@ -56,6 +60,29 @@ private fun LauncherApp(dao: com.bedrocklauncherx.data.WorldDao) {
     var editingWorld by remember { mutableStateOf<World?>(null) }
     val worlds by dao.observeAll().collectAsStateWithLifecycle(initialValue = emptyList())
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val exportBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) scope.launch {
+            runCatching {
+                val json = WorldBackup.encode(dao.getAll())
+                context.contentResolver.openOutputStream(uri)?.bufferedWriter(Charsets.UTF_8)?.use { it.write(json) }
+                    ?: error("Unable to open destination")
+            }.onSuccess { Toast.makeText(context, if (arabic) "تم تصدير ملفات التعريف" else "Profiles exported", Toast.LENGTH_SHORT).show() }
+                .onFailure { Toast.makeText(context, it.message ?: "Export failed", Toast.LENGTH_LONG).show() }
+        }
+    }
+    val importBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            runCatching {
+                val json = context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+                    ?: error("Unable to read backup")
+                val restored = WorldBackup.decode(json)
+                if (restored.isNotEmpty()) dao.insertAll(restored)
+                restored.size
+            }.onSuccess { count -> Toast.makeText(context, if (arabic) "تم استيراد $count ملف تعريف دون استبدال الموجود" else "Imported $count profiles without replacing existing ones", Toast.LENGTH_LONG).show() }
+                .onFailure { Toast.makeText(context, it.message ?: "Import failed", Toast.LENGTH_LONG).show() }
+        }
+    }
     val title = if (arabic) "BedrockLauncherX" else "BedrockLauncherX"
     val nav = if (arabic) listOf("الرئيسية", "العوالم", "الخوادم", "الإضافات", "الأداء", "الإعدادات", "حول") else listOf("Home", "Worlds", "Servers", "Mods", "Performance", "Settings", "About")
     val keys = listOf("home", "worlds", "servers", "mods", "performance", "settings", "about")
@@ -86,7 +113,7 @@ private fun LauncherApp(dao: com.bedrocklauncherx.data.WorldDao) {
             ) { padding ->
                 when (page) {
                     "home" -> HomeScreen(arabic, worlds.firstOrNull(), worlds.size, onWorlds = { page = "worlds" }, modifier = Modifier.padding(padding))
-                    "worlds" -> WorldsScreen(arabic, worlds, onAdd = { editingWorld = null; showCreate = true }, onEdit = { editingWorld = it }, onDelete = { id -> scope.launch { dao.deleteById(id) } }, modifier = Modifier.padding(padding))
+                    "worlds" -> WorldsScreen(arabic, worlds, onAdd = { editingWorld = null; showCreate = true }, onEdit = { editingWorld = it }, onDelete = { id -> scope.launch { dao.deleteById(id) } }, onExport = { exportBackup.launch("bedrocklauncherx-world-profiles.json") }, onImport = { importBackup.launch(arrayOf("application/json", "text/*")) }, modifier = Modifier.padding(padding))
                     "mods" -> ModrinthScreen(arabic, Modifier.padding(padding))
                     else -> InfoScreen(arabic, page, Modifier.padding(padding))
                 }
@@ -130,12 +157,17 @@ private fun MetricCard(label: String, value: String, modifier: Modifier = Modifi
 }
 
 @Composable
-private fun WorldsScreen(ar: Boolean, worlds: List<World>, onAdd: () -> Unit, onEdit: (World) -> Unit, onDelete: (Long) -> Unit, modifier: Modifier = Modifier) {
+private fun WorldsScreen(ar: Boolean, worlds: List<World>, onAdd: () -> Unit, onEdit: (World) -> Unit, onDelete: (Long) -> Unit, onExport: () -> Unit, onImport: () -> Unit, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(if (ar) "عوالمك" else "Your Worlds", fontSize = 23.sp, fontWeight = FontWeight.Bold)
             FilledTonalButton(onClick = onAdd) { Icon(Icons.Default.Add, contentDescription = null); Text(if (ar) "إنشاء" else "Create") }
         }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onExport) { Text(if (ar) "تصدير نسخة" else "Export backup") }
+            OutlinedButton(onClick = onImport) { Text(if (ar) "استيراد نسخة" else "Import backup") }
+        }
+        Text(if (ar) "النسخة تحفظ بيانات BedrockLauncherX فقط، ولا تحتوي ملفات عوالم Minecraft." else "Backup includes BedrockLauncherX profile metadata only, not Minecraft world files.", color = Color.Gray, fontSize = 12.sp)
         if (worlds.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(if (ar) "لا توجد عوالم. أنشئ عالمك الأول." else "No worlds yet. Create your first world.", color = Color.LightGray) }
         } else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 16.dp)) {

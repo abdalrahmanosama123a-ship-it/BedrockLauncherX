@@ -24,3 +24,8 @@ The native application currently stores world metadata (name, optional seed, gam
 - Paper setup: https://docs.papermc.io/paper/getting-started/
 - Geyser setup: https://geysermc.org/wiki/geyser/setup/
 - Android common intents: https://developer.android.com/guide/components/intents-common
+
+
+## Profile backup scope
+
+The app can export and restore its own world profile metadata as a versioned JSON file using Android’s system document picker. Restore appends new profile rows and does not overwrite existing rows. This backup does not contain Minecraft save data, thumbnails, or files from the separate official Minecraft app.
