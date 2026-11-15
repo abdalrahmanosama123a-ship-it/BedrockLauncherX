@@ -2,6 +2,8 @@
 
 BedrockLauncherX is an Android companion app intended to organize user-created worlds and, in later phases, manage a local multiplayer server while the official Minecraft Bedrock app is used separately.
 
+The current Mods page now searches Modrinth's public catalog for Java Edition mods, offers Minecraft game-version filtering, and opens each project on Modrinth. This catalog browser does not install game files or make Java mods compatible with Bedrock.
+
 ## Phase 1 delivered in this repository
 
 The native application currently stores world metadata (name, optional seed, game mode, difficulty) in a Room database and exposes a bilingual Arabic/English interface with RTL layout. Users can create, edit and delete these metadata records. They are not Minecraft world saves. Server controls, crossplay and one-tap play are intentionally not represented as working features.

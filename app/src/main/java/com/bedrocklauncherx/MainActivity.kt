@@ -1,5 +1,7 @@
 package com.bedrocklauncherx
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -25,6 +28,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.bedrocklauncherx.data.LauncherDatabase
+import com.bedrocklauncherx.data.ModrinthProject
+import com.bedrocklauncherx.data.ModrinthRepository
 import com.bedrocklauncherx.data.World
 import com.bedrocklauncherx.data.WorldValidation
 import kotlinx.coroutines.launch
@@ -82,6 +87,7 @@ private fun LauncherApp(dao: com.bedrocklauncherx.data.WorldDao) {
                 when (page) {
                     "home" -> HomeScreen(arabic, worlds.firstOrNull(), worlds.size, onWorlds = { page = "worlds" }, modifier = Modifier.padding(padding))
                     "worlds" -> WorldsScreen(arabic, worlds, onAdd = { editingWorld = null; showCreate = true }, onEdit = { editingWorld = it }, onDelete = { id -> scope.launch { dao.deleteById(id) } }, modifier = Modifier.padding(padding))
+                    "mods" -> ModrinthScreen(arabic, Modifier.padding(padding))
                     else -> InfoScreen(arabic, page, Modifier.padding(padding))
                 }
             }
@@ -168,6 +174,100 @@ private fun CreateWorldDialog(ar: Boolean, initialWorld: World?, onDismiss: () -
         } },
         confirmButton = { TextButton(enabled = WorldValidation.normalizedName(name) != null, onClick = { onSave(World(id = initialWorld?.id ?: 0L, name = checkNotNull(WorldValidation.normalizedName(name)), seed = seed.trim(), gameMode = mode, difficulty = difficulty, createdAt = initialWorld?.createdAt ?: System.currentTimeMillis())) }) { Text(if (ar) "حفظ" else "Save") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(if (ar) "إلغاء" else "Cancel") } })
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ModrinthScreen(ar: Boolean, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val repository = remember { ModrinthRepository() }
+    val scope = rememberCoroutineScope()
+    var query by remember { mutableStateOf("") }
+    var versions by remember { mutableStateOf<List<String>>(emptyList()) }
+    var selectedVersion by remember { mutableStateOf<String?>(null) }
+    var versionMenu by remember { mutableStateOf(false) }
+    var selectedLoader by remember { mutableStateOf<String?>(null) }
+    var loaderMenu by remember { mutableStateOf(false) }
+    var results by remember { mutableStateOf<List<ModrinthProject>>(emptyList()) }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        runCatching { repository.gameVersions() }
+            .onSuccess { versions = it }
+            .onFailure { error = it.message ?: "Network request failed" }
+        loading = true
+        runCatching { repository.searchMods("", null, null) }
+            .onSuccess { results = it; error = null }
+            .onFailure { error = it.message ?: "Network request failed" }
+        loading = false
+    }
+
+    fun search() {
+        loading = true
+        error = null
+        scope.launch {
+            runCatching { repository.searchMods(query, selectedVersion, selectedLoader) }
+                .onSuccess { results = it }
+                .onFailure { error = it.message ?: "Network request failed" }
+            loading = false
+        }
+    }
+
+    Column(modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(if (ar) "تصفح Modrinth" else "Browse Modrinth", fontSize = 23.sp, fontWeight = FontWeight.Bold)
+        Text(if (ar) "ابحث في إضافات Java Edition العامة واختر إصدار اللعبة لتصفية النتائج." else "Search public Java Edition mods and filter by Minecraft game version.", color = Color.LightGray, fontSize = 13.sp)
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            label = { Text(if (ar) "اسم الإضافة أو كلمة بحث" else "Mod name or search terms") },
+            trailingIcon = { IconButton(enabled = !loading, onClick = { search() }) { Icon(Icons.Default.Search, contentDescription = if (ar) "بحث" else "Search") } }
+        )
+        Box {
+            OutlinedButton(onClick = { versionMenu = true }) {
+                Text(selectedVersion ?: if (ar) "كل الإصدارات" else "All game versions")
+                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+            }
+            DropdownMenu(expanded = versionMenu, onDismissRequest = { versionMenu = false }) {
+                DropdownMenuItem(text = { Text(if (ar) "كل الإصدارات" else "All game versions") }, onClick = { selectedVersion = null; versionMenu = false; search() })
+                versions.forEach { version -> DropdownMenuItem(text = { Text(version) }, onClick = { selectedVersion = version; versionMenu = false; search() }) }
+            }
+        }
+        Box {
+            OutlinedButton(onClick = { loaderMenu = true }) {
+                Text(selectedLoader?.replaceFirstChar { it.uppercase() } ?: if (ar) "كل المحمّلات" else "All mod loaders")
+                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+            }
+            DropdownMenu(expanded = loaderMenu, onDismissRequest = { loaderMenu = false }) {
+                DropdownMenuItem(text = { Text(if (ar) "كل المحمّلات" else "All mod loaders") }, onClick = { selectedLoader = null; loaderMenu = false; search() })
+                listOf("fabric", "forge", "neoforge", "quilt").forEach { loader ->
+                    DropdownMenuItem(text = { Text(loader.replaceFirstChar { it.uppercase() }) }, onClick = { selectedLoader = loader; loaderMenu = false; search() })
+                }
+            }
+        }
+        if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+        error?.let { Text(if (ar) "تعذر الاتصال بـ Modrinth: $it" else "Could not reach Modrinth: $it", color = Color(0xFFFF8A80), fontSize = 12.sp) }
+        if (!loading && error == null && results.isEmpty()) Text(if (ar) "لا توجد نتائج مطابقة." else "No matching projects.", color = Color.LightGray)
+        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 12.dp)) {
+            items(results, key = { it.id }) { project ->
+                Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(project.title, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        Text(if (ar) "بواسطة ${project.author} · ${project.downloads} تنزيل" else "By ${project.author} · ${project.downloads} downloads", color = NeonGreen, fontSize = 12.sp)
+                        Text(project.description, color = Color.LightGray, fontSize = 13.sp, maxLines = 3)
+                        Text((if (ar) "إصدارات اللعبة: " else "Game versions: ") + project.gameVersions.take(8).joinToString() + if (project.gameVersions.size > 8) "…" else "", color = Color.Gray, fontSize = 11.sp, maxLines = 2)
+                        TextButton(onClick = {
+                            val pageUrl = "https://modrinth.com/mod/${Uri.encode(project.slug)}"
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(pageUrl)))
+                        }) { Text(if (ar) "فتح صفحة Modrinth" else "Open on Modrinth") }
+                    }
+                }
+            }
+        }
+        Text(if (ar) "هذه مودات Minecraft Java Edition. التصفح لا يثبت الملفات داخل اللعبة." else "These are Minecraft Java Edition mods. Browsing does not install files into the game.", color = Color.Gray, fontSize = 11.sp)
+    }
 }
 
 @Composable
